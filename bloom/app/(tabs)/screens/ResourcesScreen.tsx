@@ -476,3 +476,15 @@ const styles = StyleSheet.create({
   },
   disclaimerTitle: {
     fontSize: 14,
+    fontWeight: '600',
+    color: '#92400E',
+    marginBottom: 4,
+  },
+  disclaimerText: {
+    fontSize: 13,
+    color: '#92400E',
+    lineHeight: 18,
+  }
+})
+
+export default ResourcesScreen;

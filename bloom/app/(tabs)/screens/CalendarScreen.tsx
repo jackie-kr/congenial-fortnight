@@ -18,11 +18,11 @@ import { UserPreferences, HrtEntry, HrtEntries } from '../types';
 
 interface CalendarScreenProps {
   route: RouteProp<{
-    params: {
+    Calendar: {
       userPreferences: UserPreferences;
       saveUserPreferences: (prefs: UserPreferences) => void;
     };
-  }, 'params'>;
+  }, 'Calendar'>;
 }
 
 interface MarkedDates {
@@ -34,7 +34,7 @@ interface MarkedDates {
 }
 
 const CalendarScreen: React.FC<CalendarScreenProps> = ({ route }) => {
-  const { userPreferences, saveUserPreferences } = route.params || {};
+  const { userPreferences, saveUserPreferences } = route.params;
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [hrtEntries, setHrtEntries] = useState<HrtEntries>({});
   const [modalVisible, setModalVisible] = useState<boolean>(false);
@@ -105,9 +105,9 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({ route }) => {
         body: 'Time for your hormone therapy! You\'re doing amazing! 🌟',
       },
       trigger: {
-        hour: parseInt(hours),
-        minute: parseInt(minutes),
+        seconds: parseInt(hours) * 3600 + parseInt(minutes) * 60,
         repeats: true,
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL
       },
     });
   };

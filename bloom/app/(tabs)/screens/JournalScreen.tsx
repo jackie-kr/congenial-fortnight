@@ -17,10 +17,10 @@ import { UserPreferences, JournalEntry } from '../types';
 
 interface JournalScreenProps {
   route: RouteProp<{
-    params: {
+    Journal: {
       userPreferences: UserPreferences;
     };
-  }, 'params'>;
+  }, 'Journal'>;
 }
 
 interface NewJournalEntry {
