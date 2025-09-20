@@ -1,6 +1,6 @@
 // App.tsx - Main application component
 import React, { useState, useEffect, JSX } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, NavigationIndependentTree } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -89,60 +89,62 @@ export default function App(): JSX.Element {
   };
 
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          tabBarIcon: ({ focused, color, size }) => {
-            let iconName: keyof typeof Ionicons.glyphMap;
+    <NavigationIndependentTree>
+      <NavigationContainer>
+        <Tab.Navigator
+          screenOptions={({ route }) => ({
+            tabBarIcon: ({ focused, color, size }) => {
+              let iconName: keyof typeof Ionicons.glyphMap;
 
-            switch (route.name) {
-              case 'Calendar':
-                iconName = focused ? 'calendar' : 'calendar-outline';
-                break;
-              case 'Journal':
-                iconName = focused ? 'book' : 'book-outline';
-                break;
-              case 'Resources':
-                iconName = focused ? 'library' : 'library-outline';
-                break;
-              case 'Settings':
-                iconName = focused ? 'settings' : 'settings-outline';
-                break;
-            }
+              switch (route.name) {
+                case 'Calendar':
+                  iconName = focused ? 'calendar' : 'calendar-outline';
+                  break;
+                case 'Journal':
+                  iconName = focused ? 'book' : 'book-outline';
+                  break;
+                case 'Resources':
+                  iconName = focused ? 'library' : 'library-outline';
+                  break;
+                case 'Settings':
+                  iconName = focused ? 'settings' : 'settings-outline';
+                  break;
+              }
 
-            return <Ionicons name={iconName} size={size} color={color} />;
-          },
-          tabBarActiveTintColor: '#6B46C1',
-          tabBarInactiveTintColor: 'gray',
-          headerStyle: {
-            backgroundColor: '#6B46C1',
-          },
-          headerTintColor: '#fff',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
-        })}
-      >
-        <Tab.Screen 
-          name="Calendar" 
-          component={CalendarScreen}
-          initialParams={{ userPreferences, saveUserPreferences }}
-        />
-        <Tab.Screen 
-          name="Journal" 
-          component={JournalScreen}
-          initialParams={{ userPreferences }}
-        />
-        <Tab.Screen 
-          name="Resources" 
-          component={ResourcesScreen}
-        />
-        <Tab.Screen 
-          name="Settings" 
-          component={SettingsScreen}
-          initialParams={{ userPreferences, saveUserPreferences }}
-        />
-      </Tab.Navigator>
-    </NavigationContainer>
+              return <Ionicons name={iconName} size={size} color={color} />;
+            },
+            tabBarActiveTintColor: '#6B46C1',
+            tabBarInactiveTintColor: 'gray',
+            headerStyle: {
+              backgroundColor: '#6B46C1',
+            },
+            headerTintColor: '#fff',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+            },
+          })}
+        >
+          <Tab.Screen 
+            name="Calendar" 
+            component={CalendarScreen}
+            initialParams={{ userPreferences, saveUserPreferences }}
+          />
+          <Tab.Screen 
+            name="Journal" 
+            component={JournalScreen}
+            initialParams={{ userPreferences }}
+          />
+          <Tab.Screen 
+            name="Resources" 
+            component={ResourcesScreen}
+          />
+          <Tab.Screen 
+            name="Settings" 
+            component={SettingsScreen}
+            initialParams={{ userPreferences, saveUserPreferences }}
+          />
+        </Tab.Navigator>
+      </NavigationContainer>
+    </NavigationIndependentTree>
   );
 }
