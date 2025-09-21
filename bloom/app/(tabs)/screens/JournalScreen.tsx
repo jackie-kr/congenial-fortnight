@@ -1,4 +1,4 @@
-// screens/JournalScreen.tsx
+// screens/JournalScreen.tsx - Updated with Feelings Wheel
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -9,11 +9,20 @@ import {
   ScrollView,
   Alert,
   Modal,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RouteProp } from '@react-navigation/native';
-import { UserPreferences, JournalEntry } from '../types';
+import { UserPreferences } from '../types';
+import { 
+  FeelingSelection, 
+  FeelingsAnalytics,
+  getCoreFeelingById,
+  getSpecificFeelingById 
+} from '../types/feelings';
+import { FeelingsWheel } from '../components/FeelingsWheel';
+import { FeelingsAnalyticsEngine } from '../utils/feelingsAnalytics';
+import { AppStorage } from '../utils/storage'; // Using your chosen storage method
 
 interface JournalScreenProps {
   route: RouteProp<{
@@ -23,53 +32,64 @@ interface JournalScreenProps {
   }, 'Journal'>;
 }
 
+interface JournalEntry {
+  id: string;
+  feelingSelection: FeelingSelection;
+  gratitude: string;
+  progress: string;
+  challenges: string;
+  goals: string;
+  date: string;
+}
+
 interface NewJournalEntry {
-  mood: number;
+  feelingSelection: FeelingSelection | null;
   gratitude: string;
   progress: string;
   challenges: string;
   goals: string;
 }
 
-interface MoodEmojis {
-  [key: number]: string;
-}
-
 const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
   const { userPreferences } = route.params || {};
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [newEntry, setNewEntry] = useState<NewJournalEntry>({
-    mood: 5,
+    feelingSelection: null,
     gratitude: '',
     progress: '',
     challenges: '',
     goals: '',
   });
   const [modalVisible, setModalVisible] = useState<boolean>(false);
+  const [showAnalytics, setShowAnalytics] = useState<boolean>(false);
+  const [analytics, setAnalytics] = useState<FeelingsAnalytics | null>(null);
 
   const journalPrompts: string[] = [
     "What did you like about yourself today?",
     "What progress are you most proud of?",
     "What made you feel affirmed today?",
+    "How did you show yourself compassion?",
     "What challenge did you overcome?",
-    "How did you practice self-care?",
     "What goal are you working towards?",
     "What made you smile today?",
-    "How did you show yourself compassion?"
+    "How are you honoring your authentic self?"
   ];
-
-  const moodEmojis: MoodEmojis = {
-    1: '😭', 2: '😔', 3: '😐', 4: '🙂', 5: '😊',
-    6: '😄', 7: '🤩', 8: '✨', 9: '🌟', 10: '🎉'
-  };
 
   useEffect(() => {
     loadJournalEntries();
   }, []);
 
+  useEffect(() => {
+    if (journalEntries.length > 0) {
+      const feelingSelections = journalEntries.map(entry => entry.feelingSelection);
+      const analyticsData = FeelingsAnalyticsEngine.analyzeFeelings(feelingSelections);
+      setAnalytics(analyticsData);
+    }
+  }, [journalEntries]);
+
   const loadJournalEntries = async (): Promise<void> => {
     try {
-      const saved = await AsyncStorage.getItem('journalEntries');
+      const saved = await AppStorage.getItem('journalEntries');
       if (saved) {
         setJournalEntries(JSON.parse(saved));
       }
@@ -80,7 +100,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
 
   const saveJournalEntries = async (entries: JournalEntry[]): Promise<void> => {
     try {
-      await AsyncStorage.setItem('journalEntries', JSON.stringify(entries));
+      await AppStorage.setItem('journalEntries', JSON.stringify(entries));
       setJournalEntries(entries);
     } catch (error) {
       console.log('Error saving journal entries:', error);
@@ -88,14 +108,23 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
   };
 
   const addJournalEntry = (): void => {
+    if (!newEntry.feelingSelection) {
+      Alert.alert('Please select how you\'re feeling first');
+      return;
+    }
+
     if (!newEntry.gratitude && !newEntry.progress) {
       Alert.alert('Please write at least one reflection');
       return;
     }
 
     const entry: JournalEntry = {
-      ...newEntry,
       id: Date.now().toString(),
+      feelingSelection: newEntry.feelingSelection,
+      gratitude: newEntry.gratitude,
+      progress: newEntry.progress,
+      challenges: newEntry.challenges,
+      goals: newEntry.goals,
       date: new Date().toISOString(),
     };
 
@@ -104,7 +133,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
     
     // Reset form
     setNewEntry({
-      mood: 5,
+      feelingSelection: null,
       gratitude: '',
       progress: '',
       challenges: '',
@@ -115,33 +144,19 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
     Alert.alert('Beautiful! 🌸', 'Your reflection has been saved!');
   };
 
-  const updateEntryField = (field: keyof NewJournalEntry, value: string | number): void => {
+  const updateEntryField = (field: keyof Omit<NewJournalEntry, 'feelingSelection'>, value: string): void => {
     setNewEntry(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const MoodSelector: React.FC = () => (
-    <View style={styles.moodContainer}>
-      <Text style={styles.sectionTitle}>How are you feeling? (1-10)</Text>
-      <View style={styles.moodGrid}>
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((mood) => (
-          <TouchableOpacity
-            key={mood}
-            style={[
-              styles.moodButton,
-              newEntry.mood === mood && styles.selectedMood
-            ]}
-            onPress={() => updateEntryField('mood', mood)}
-          >
-            <Text style={styles.moodEmoji}>{moodEmojis[mood]}</Text>
-            <Text style={styles.moodNumber}>{mood}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
+  const handleFeelingSelection = (selection: FeelingSelection): void => {
+    setNewEntry(prev => ({
+      ...prev,
+      feelingSelection: selection
+    }));
+  };
 
   const getRandomPrompt = (): string => {
     return journalPrompts[Math.floor(Math.random() * journalPrompts.length)];
@@ -157,6 +172,148 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
     });
   };
 
+  const AnalyticsSection: React.FC = () => {
+    if (!analytics || journalEntries.length < 3) {
+      return (
+        <View style={styles.analyticsCard}>
+          <Text style={styles.analyticsTitle}>📊 Emotional Insights</Text>
+          <Text style={styles.analyticsText}>
+            Add more journal entries to see your emotional patterns and insights!
+          </Text>
+        </View>
+      );
+    }
+
+    const insights = FeelingsAnalyticsEngine.getInsights(analytics);
+    const recentMoodScore = FeelingsAnalyticsEngine.getRecentMoodScore(
+      journalEntries.map(e => e.feelingSelection)
+    );
+    const emotionalDiversity = FeelingsAnalyticsEngine.getEmotionalDiversity(
+      journalEntries.map(e => e.feelingSelection)
+    );
+
+    return (
+      <View style={styles.analyticsCard}>
+        <Text style={styles.analyticsTitle}>📊 Your Emotional Journey</Text>
+        
+        <View style={styles.metricsRow}>
+          <View style={styles.metric}>
+            <Text style={styles.metricValue}>{recentMoodScore}/10</Text>
+            <Text style={styles.metricLabel}>Recent Mood</Text>
+          </View>
+          <View style={styles.metric}>
+            <Text style={styles.metricValue}>{Math.round(emotionalDiversity * 100)}%</Text>
+            <Text style={styles.metricLabel}>Emotional Range</Text>
+          </View>
+          <View style={styles.metric}>
+            <Text style={styles.metricValue}>
+              {analytics.recentTrend === 'improving' ? '↗️' : 
+               analytics.recentTrend === 'declining' ? '↘️' : '→'}
+            </Text>
+            <Text style={styles.metricLabel}>Trend</Text>
+          </View>
+        </View>
+
+        {insights.map((insight, index) => (
+          <Text key={index} style={styles.insightText}>• {insight}</Text>
+        ))}
+
+        <TouchableOpacity
+          style={styles.detailedAnalyticsButton}
+          onPress={() => setShowAnalytics(true)}
+        >
+          <Text style={styles.detailedAnalyticsButtonText}>View Detailed Analytics</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const DetailedAnalyticsModal: React.FC = () => (
+    <Modal
+      animationType="slide"
+      transparent={false}
+      visible={showAnalytics}
+      onRequestClose={() => setShowAnalytics(false)}
+    >
+      <ScrollView style={styles.analyticsModal}>
+        <View style={styles.analyticsHeader}>
+          <TouchableOpacity
+            style={styles.closeAnalyticsButton}
+            onPress={() => setShowAnalytics(false)}
+          >
+            <Ionicons name="close" size={24} color="#6B46C1" />
+          </TouchableOpacity>
+          <Text style={styles.analyticsModalTitle}>Detailed Emotional Analytics</Text>
+        </View>
+
+        {analytics && (
+          <View style={styles.analyticsContent}>
+            <View style={styles.distributionSection}>
+              <Text style={styles.sectionTitle}>Core Feelings Distribution</Text>
+              {Object.entries(analytics.coreDistribution).map(([feelingId, count]) => {
+                const feeling = getCoreFeelingById(feelingId);
+                const percentage = Math.round((count / journalEntries.length) * 100);
+                return (
+                  <View key={feelingId} style={styles.distributionItem}>
+                    <Text style={styles.feelingName}>{feeling?.name || feelingId}</Text>
+                    <View style={styles.distributionBar}>
+                      <View 
+                        style={[
+                          styles.distributionFill, 
+                          { 
+                            width: `${percentage}%`,
+                            backgroundColor: feeling?.color || '#6B46C1'
+                          }
+                        ]} 
+                      />
+                    </View>
+                    <Text style={styles.percentageText}>{percentage}%</Text>
+                  </View>
+                );
+              })}
+            </View>
+
+            <View style={styles.distributionSection}>
+              <Text style={styles.sectionTitle}>Weekly Pattern</Text>
+              {Object.entries(analytics.weeklyPatterns).map(([day, count]) => {
+                const maxCount = Math.max(...Object.values(analytics.weeklyPatterns));
+                const percentage = maxCount > 0 ? Math.round((count / maxCount) * 100) : 0;
+                return (
+                  <View key={day} style={styles.distributionItem}>
+                    <Text style={styles.feelingName}>{day}</Text>
+                    <View style={styles.distributionBar}>
+                      <View 
+                        style={[
+                          styles.distributionFill, 
+                          { 
+                            width: `${percentage}%`,
+                            backgroundColor: '#54A0FF'
+                          }
+                        ]} 
+                      />
+                    </View>
+                    <Text style={styles.percentageText}>{count} entries</Text>
+                  </View>
+                );
+              })}
+            </View>
+
+            <View style={styles.recommendationsSection}>
+              <Text style={styles.sectionTitle}>Recommendations</Text>
+              <Text style={styles.recommendationText}>
+                Based on your patterns, consider practicing mindfulness on days when you feel more challenged.
+              </Text>
+              <Text style={styles.recommendationText}>
+                Your emotional diversity of {Math.round(FeelingsAnalyticsEngine.getEmotionalDiversity(journalEntries.map(e => e.feelingSelection)) * 100)}% 
+                shows you're in touch with a good range of emotions.
+              </Text>
+            </View>
+          </View>
+        )}
+      </ScrollView>
+    </Modal>
+  );
+
   interface EntryCardProps {
     entry: JournalEntry;
   }
@@ -165,9 +322,11 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
     <View style={styles.entryCard}>
       <View style={styles.entryHeader}>
         <Text style={styles.entryDate}>{formatDate(entry.date)}</Text>
-        <Text style={styles.entryMood}>
-          {moodEmojis[entry.mood]} {entry.mood}/10
-        </Text>
+        <View style={styles.feelingBadge}>
+          <Text style={styles.feelingBadgeText}>
+            {entry.feelingSelection.coreFeeling.name} → {entry.feelingSelection.specificFeeling.name}
+          </Text>
+        </View>
       </View>
       
       {entry.gratitude && (
@@ -216,6 +375,8 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
           <Text style={styles.addButtonText}>New Reflection</Text>
         </TouchableOpacity>
 
+        <AnalyticsSection />
+
         {journalEntries.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>
@@ -246,7 +407,10 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
             <Text style={styles.modalTitle}>New Reflection</Text>
           </View>
 
-          <MoodSelector />
+          <FeelingsWheel
+            onFeelingSelected={handleFeelingSelection}
+            selectedFeeling={newEntry.feelingSelection || undefined}
+          />
 
           <View style={styles.inputSection}>
             <Text style={styles.inputLabel}>💝 What are you grateful for today?</Text>
@@ -297,6 +461,8 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
           </TouchableOpacity>
         </ScrollView>
       </Modal>
+
+      <DetailedAnalyticsModal />
     </View>
   );
 };
@@ -340,6 +506,67 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
+  analyticsCard: {
+    backgroundColor: '#ffffff',
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  analyticsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  analyticsText: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 16,
+    paddingVertical: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+  },
+  metric: {
+    alignItems: 'center',
+  },
+  metricValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#6B46C1',
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  insightText: {
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 20,
+    marginVertical: 2,
+  },
+  detailedAnalyticsButton: {
+    backgroundColor: '#6B46C1',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  detailedAnalyticsButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   emptyState: {
     padding: 40,
     alignItems: 'center',
@@ -364,17 +591,26 @@ const styles = StyleSheet.create({
   entryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 12,
   },
   entryDate: {
     fontSize: 14,
     color: '#6B7280',
     fontWeight: '500',
+    flex: 1,
   },
-  entryMood: {
-    fontSize: 16,
-    fontWeight: '600',
+  feelingBadge: {
+    backgroundColor: '#EDE9FE',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  feelingBadgeText: {
+    fontSize: 12,
+    color: '#6B46C1',
+    fontWeight: '500',
   },
   entrySection: {
     marginVertical: 8,
@@ -412,43 +648,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-  moodContainer: {
-    backgroundColor: '#ffffff',
-    margin: 16,
-    padding: 16,
-    borderRadius: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  moodGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  moodButton: {
-    width: '18%',
-    aspectRatio: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginBottom: 8,
-  },
-  selectedMood: {
-    backgroundColor: '#6B46C1',
-    borderColor: '#6B46C1',
-  },
-  moodEmoji: {
-    fontSize: 16,
-  },
-  moodNumber: {
-    fontSize: 10,
-    fontWeight: '500',
-  },
   inputSection: {
     backgroundColor: '#ffffff',
     margin: 16,
@@ -479,6 +678,82 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '600',
+  },
+  analyticsModal: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  analyticsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  closeAnalyticsButton: {
+    position: 'absolute',
+    left: 16,
+    padding: 8,
+  },
+  analyticsModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  analyticsContent: {
+    padding: 16,
+  },
+  distributionSection: {
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  distributionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 6,
+  },
+  feelingName: {
+    fontSize: 14,
+    color: '#374151',
+    width: 80,
+    fontWeight: '500',
+  },
+  distributionBar: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 4,
+    marginHorizontal: 8,
+  },
+  distributionFill: {
+    height: 8,
+    borderRadius: 4,
+  },
+  percentageText: {
+    fontSize: 12,
+    color: '#6B7280',
+    width: 40,
+    textAlign: 'right',
+  },
+  recommendationsSection: {
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 12,
+  },
+  recommendationText: {
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 20,
+    marginBottom: 8,
   },
 });
 
