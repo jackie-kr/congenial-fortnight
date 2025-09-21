@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp } from '@react-navigation/native';
+<<<<<<< Updated upstream
 import { UserPreferences } from '../types';
 import { 
   FeelingSelection, 
@@ -23,6 +24,10 @@ import {
 import { FeelingsWheel } from '../components/FeelingsWheel';
 import { FeelingsAnalyticsEngine } from '../utils/feelingsAnalytics';
 import { AppStorage } from '../utils/storage'; // Using your chosen storage method
+=======
+import { UserPreferences, JournalEntry } from '../types';
+import { storage } from '../../../components/fallback-storage';
+>>>>>>> Stashed changes
 
 interface JournalScreenProps {
   route: RouteProp<{
@@ -61,8 +66,13 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
     goals: '',
   });
   const [modalVisible, setModalVisible] = useState<boolean>(false);
+<<<<<<< Updated upstream
   const [showAnalytics, setShowAnalytics] = useState<boolean>(false);
   const [analytics, setAnalytics] = useState<FeelingsAnalytics | null>(null);
+=======
+  const [deleteModalVisible, setDeleteModalVisible] = useState<boolean>(false);
+  const [entryToDelete, setEntryToDelete] = useState<string>('');
+>>>>>>> Stashed changes
 
   const journalPrompts: string[] = [
     "What did you like about yourself today?",
@@ -72,7 +82,15 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
     "What challenge did you overcome?",
     "What goal are you working towards?",
     "What made you smile today?",
+<<<<<<< Updated upstream
     "How are you honoring your authentic self?"
+=======
+    "How did you show yourself compassion?",
+    "What step toward your authentic self did you take?",
+    "How did you honor your feelings today?",
+    "What brought you joy in your journey?",
+    "How did you celebrate being you?"
+>>>>>>> Stashed changes
   ];
 
   useEffect(() => {
@@ -89,7 +107,11 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
 
   const loadJournalEntries = async (): Promise<void> => {
     try {
+<<<<<<< Updated upstream
       const saved = await AppStorage.getItem('journalEntries');
+=======
+      const saved = await storage.getItem('journalEntries');
+>>>>>>> Stashed changes
       if (saved) {
         setJournalEntries(JSON.parse(saved));
       }
@@ -100,7 +122,11 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
 
   const saveJournalEntries = async (entries: JournalEntry[]): Promise<void> => {
     try {
+<<<<<<< Updated upstream
       await AppStorage.setItem('journalEntries', JSON.stringify(entries));
+=======
+      await storage.setItem('journalEntries', JSON.stringify(entries));
+>>>>>>> Stashed changes
       setJournalEntries(entries);
     } catch (error) {
       console.log('Error saving journal entries:', error);
@@ -108,6 +134,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
   };
 
   const addJournalEntry = (): void => {
+<<<<<<< Updated upstream
     if (!newEntry.feelingSelection) {
       Alert.alert('Please select how you\'re feeling first');
       return;
@@ -115,6 +142,11 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
 
     if (!newEntry.gratitude && !newEntry.progress) {
       Alert.alert('Please write at least one reflection');
+=======
+    if (!newEntry.gratitude && !newEntry.progress && !newEntry.challenges && !newEntry.goals) {
+      // Use custom alert instead of Alert.alert
+      setDeleteModalVisible(true);
+>>>>>>> Stashed changes
       return;
     }
 
@@ -141,7 +173,30 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
     });
     
     setModalVisible(false);
-    Alert.alert('Beautiful! 🌸', 'Your reflection has been saved!');
+    console.log('Journal entry saved successfully');
+  };
+
+  const deleteEntry = (entryId: string): void => {
+    console.log('deleteEntry called with ID:', entryId);
+    setEntryToDelete(entryId);
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDelete = async (): Promise<void> => {
+    console.log('Delete confirmed, removing entry:', entryToDelete);
+    try {
+      const updatedEntries = journalEntries.filter(entry => entry.id !== entryToDelete);
+      console.log('Entries after filter:', updatedEntries.length);
+      
+      await storage.setItem('journalEntries', JSON.stringify(updatedEntries));
+      setJournalEntries(updatedEntries);
+      console.log('Entry deleted successfully');
+      
+      setDeleteModalVisible(false);
+      setEntryToDelete('');
+    } catch (error) {
+      console.log('Error deleting entry:', error);
+    }
   };
 
   const updateEntryField = (field: keyof Omit<NewJournalEntry, 'feelingSelection'>, value: string): void => {
@@ -151,12 +206,38 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
     }));
   };
 
+<<<<<<< Updated upstream
   const handleFeelingSelection = (selection: FeelingSelection): void => {
     setNewEntry(prev => ({
       ...prev,
       feelingSelection: selection
     }));
   };
+=======
+  const MoodSelector: React.FC = () => (
+    <View style={styles.moodContainer}>
+      <Text style={styles.sectionTitle}>How are you feeling? (1-10)</Text>
+      <View style={styles.moodGrid}>
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((mood) => (
+          <TouchableOpacity
+            key={mood}
+            style={[
+              styles.moodButton,
+              newEntry.mood === mood && styles.selectedMood
+            ]}
+            onPress={() => updateEntryField('mood', mood)}
+          >
+            <Text style={styles.moodEmoji}>{moodEmojis[mood]}</Text>
+            <Text style={[
+              styles.moodNumber,
+              newEntry.mood === mood && styles.selectedMoodText
+            ]}>{mood}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+>>>>>>> Stashed changes
 
   const getRandomPrompt = (): string => {
     return journalPrompts[Math.floor(Math.random() * journalPrompts.length)];
@@ -172,6 +253,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
     });
   };
 
+<<<<<<< Updated upstream
   const AnalyticsSection: React.FC = () => {
     if (!analytics || journalEntries.length < 3) {
       return (
@@ -313,6 +395,47 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
       </ScrollView>
     </Modal>
   );
+=======
+  const getEntryStats = () => {
+    if (journalEntries.length === 0) return null;
+    
+    const totalMood = journalEntries.reduce((sum, entry) => sum + entry.mood, 0);
+    const averageMood = Math.round((totalMood / journalEntries.length) * 10) / 10;
+    const streakDays = getJournalingStreak();
+    
+    return { averageMood, totalEntries: journalEntries.length, streakDays };
+  };
+
+  const getJournalingStreak = (): number => {
+    if (journalEntries.length === 0) return 0;
+    
+    const sortedEntries = [...journalEntries].sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+    
+    let streak = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    for (let i = 0; i < sortedEntries.length; i++) {
+      const entryDate = new Date(sortedEntries[i].date);
+      entryDate.setHours(0, 0, 0, 0);
+      
+      const daysDiff = Math.floor((today.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (daysDiff === i) {
+        streak++;
+      } else if (daysDiff === i + 1 && i === 0) {
+        // Allow for yesterday if it's the first entry
+        streak++;
+      } else {
+        break;
+      }
+    }
+    
+    return streak;
+  };
+>>>>>>> Stashed changes
 
   interface EntryCardProps {
     entry: JournalEntry;
@@ -322,10 +445,27 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
     <View style={styles.entryCard}>
       <View style={styles.entryHeader}>
         <Text style={styles.entryDate}>{formatDate(entry.date)}</Text>
+<<<<<<< Updated upstream
         <View style={styles.feelingBadge}>
           <Text style={styles.feelingBadgeText}>
             {entry.feelingSelection.coreFeeling.name} → {entry.feelingSelection.specificFeeling.name}
           </Text>
+=======
+        <View style={styles.entryHeaderRight}>
+          <Text style={styles.entryMood}>
+            {moodEmojis[entry.mood]} {entry.mood}/10
+          </Text>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => {
+              console.log('Delete button pressed for entry:', entry.id);
+              deleteEntry(entry.id);
+            }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="trash-outline" size={18} color="#EF4444" />
+          </TouchableOpacity>
+>>>>>>> Stashed changes
         </View>
       </View>
       
@@ -359,12 +499,31 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
     </View>
   );
 
+  const stats = getEntryStats();
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Your Journey 🌱</Text>
           <Text style={styles.promptText}>"{getRandomPrompt()}"</Text>
+          
+          {stats && (
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{stats.totalEntries}</Text>
+                <Text style={styles.statLabel}>Reflections</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{stats.averageMood}</Text>
+                <Text style={styles.statLabel}>Avg Mood</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{stats.streakDays}</Text>
+                <Text style={styles.statLabel}>Day Streak</Text>
+              </View>
+            </View>
+          )}
         </View>
 
         <TouchableOpacity
@@ -400,7 +559,17 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
           <View style={styles.modalHeader}>
             <TouchableOpacity
               style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
+              onPress={() => {
+                setModalVisible(false);
+                // Reset form when closing
+                setNewEntry({
+                  mood: 5,
+                  gratitude: '',
+                  progress: '',
+                  challenges: '',
+                  goals: '',
+                });
+              }}
             >
               <Ionicons name="close" size={24} color="#6B46C1" />
             </TouchableOpacity>
@@ -417,6 +586,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
             <TextInput
               style={styles.textInput}
               placeholder="I'm grateful for..."
+              placeholderTextColor="#9CA3AF"
               value={newEntry.gratitude}
               onChangeText={(text) => updateEntryField('gratitude', text)}
               multiline
@@ -428,6 +598,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
             <TextInput
               style={styles.textInput}
               placeholder="Today I made progress by..."
+              placeholderTextColor="#9CA3AF"
               value={newEntry.progress}
               onChangeText={(text) => updateEntryField('progress', text)}
               multiline
@@ -439,6 +610,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
             <TextInput
               style={styles.textInput}
               placeholder="I worked through..."
+              placeholderTextColor="#9CA3AF"
               value={newEntry.challenges}
               onChangeText={(text) => updateEntryField('challenges', text)}
               multiline
@@ -450,6 +622,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
             <TextInput
               style={styles.textInput}
               placeholder="I'm working towards..."
+              placeholderTextColor="#9CA3AF"
               value={newEntry.goals}
               onChangeText={(text) => updateEntryField('goals', text)}
               multiline
@@ -459,6 +632,8 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
           <TouchableOpacity style={styles.saveButton} onPress={addJournalEntry}>
             <Text style={styles.saveButtonText}>Save Reflection</Text>
           </TouchableOpacity>
+          
+          <View style={{ height: 40 }} />
         </ScrollView>
       </Modal>
 
@@ -490,6 +665,27 @@ const styles = StyleSheet.create({
     color: '#E5E7EB',
     fontSize: 16,
     fontStyle: 'italic',
+    marginBottom: 16,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  statLabel: {
+    color: '#E5E7EB',
+    fontSize: 12,
+    marginTop: 4,
   },
   addButton: {
     backgroundColor: '#6B46C1',
@@ -499,6 +695,11 @@ const styles = StyleSheet.create({
     padding: 16,
     margin: 16,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   addButtonText: {
     color: '#ffffff',
@@ -594,12 +795,17 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 12,
   },
+  entryHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   entryDate: {
     fontSize: 14,
     color: '#6B7280',
     fontWeight: '500',
     flex: 1,
   },
+<<<<<<< Updated upstream
   feelingBadge: {
     backgroundColor: '#EDE9FE',
     paddingHorizontal: 8,
@@ -611,6 +817,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B46C1',
     fontWeight: '500',
+=======
+  entryMood: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 12,
+  },
+  deleteButton: {
+    padding: 8,
+    borderRadius: 4,
+    backgroundColor: '#FEE2E2',
+    marginLeft: 8,
+>>>>>>> Stashed changes
   },
   entrySection: {
     marginVertical: 8,
@@ -648,16 +866,73 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
+<<<<<<< Updated upstream
+=======
+  moodContainer: {
+    backgroundColor: '#ffffff',
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#374151',
+  },
+  moodGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  moodButton: {
+    width: '18%',
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 8,
+    backgroundColor: '#F9FAFB',
+  },
+  selectedMood: {
+    backgroundColor: '#6B46C1',
+    borderColor: '#6B46C1',
+  },
+  moodEmoji: {
+    fontSize: 16,
+  },
+  moodNumber: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  selectedMoodText: {
+    color: '#ffffff',
+  },
+>>>>>>> Stashed changes
   inputSection: {
     backgroundColor: '#ffffff',
     margin: 16,
     padding: 16,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
+    color: '#374151',
   },
   textInput: {
     borderWidth: 1,
@@ -666,6 +941,8 @@ const styles = StyleSheet.create({
     padding: 12,
     minHeight: 80,
     textAlignVertical: 'top',
+    fontSize: 16,
+    backgroundColor: '#F9FAFB',
   },
   saveButton: {
     backgroundColor: '#6B46C1',
@@ -673,6 +950,11 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   saveButtonText: {
     color: '#ffffff',
