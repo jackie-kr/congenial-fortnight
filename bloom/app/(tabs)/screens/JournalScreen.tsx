@@ -90,6 +90,11 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
   const addJournalEntry = (): void => {
     if (!newEntry.gratitude && !newEntry.progress) {
       Alert.alert('Please write at least one reflection');
+=======
+    if (!newEntry.gratitude && !newEntry.progress && !newEntry.challenges && !newEntry.goals) {
+      // Use custom alert instead of Alert.alert
+      setDeleteModalVisible(true);
+>>>>>>> Stashed changes
       return;
     }
 
@@ -112,7 +117,30 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
     });
     
     setModalVisible(false);
-    Alert.alert('Beautiful! 🌸', 'Your reflection has been saved!');
+    console.log('Journal entry saved successfully');
+  };
+
+  const deleteEntry = (entryId: string): void => {
+    console.log('deleteEntry called with ID:', entryId);
+    setEntryToDelete(entryId);
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDelete = async (): Promise<void> => {
+    console.log('Delete confirmed, removing entry:', entryToDelete);
+    try {
+      const updatedEntries = journalEntries.filter(entry => entry.id !== entryToDelete);
+      console.log('Entries after filter:', updatedEntries.length);
+      
+      await storage.setItem('journalEntries', JSON.stringify(updatedEntries));
+      setJournalEntries(updatedEntries);
+      console.log('Entry deleted successfully');
+      
+      setDeleteModalVisible(false);
+      setEntryToDelete('');
+    } catch (error) {
+      console.log('Error deleting entry:', error);
+    }
   };
 
   const updateEntryField = (field: keyof NewJournalEntry, value: string | number): void => {
@@ -200,12 +228,31 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
     </View>
   );
 
+  const stats = getEntryStats();
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Your Journey 🌱</Text>
           <Text style={styles.promptText}>"{getRandomPrompt()}"</Text>
+          
+          {stats && (
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{stats.totalEntries}</Text>
+                <Text style={styles.statLabel}>Reflections</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{stats.averageMood}</Text>
+                <Text style={styles.statLabel}>Avg Mood</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{stats.streakDays}</Text>
+                <Text style={styles.statLabel}>Day Streak</Text>
+              </View>
+            </View>
+          )}
         </View>
 
         <TouchableOpacity
@@ -239,7 +286,17 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
           <View style={styles.modalHeader}>
             <TouchableOpacity
               style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
+              onPress={() => {
+                setModalVisible(false);
+                // Reset form when closing
+                setNewEntry({
+                  mood: 5,
+                  gratitude: '',
+                  progress: '',
+                  challenges: '',
+                  goals: '',
+                });
+              }}
             >
               <Ionicons name="close" size={24} color="#6B46C1" />
             </TouchableOpacity>
@@ -253,6 +310,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
             <TextInput
               style={styles.textInput}
               placeholder="I'm grateful for..."
+              placeholderTextColor="#9CA3AF"
               value={newEntry.gratitude}
               onChangeText={(text) => updateEntryField('gratitude', text)}
               multiline
@@ -264,6 +322,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
             <TextInput
               style={styles.textInput}
               placeholder="Today I made progress by..."
+              placeholderTextColor="#9CA3AF"
               value={newEntry.progress}
               onChangeText={(text) => updateEntryField('progress', text)}
               multiline
@@ -275,6 +334,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
             <TextInput
               style={styles.textInput}
               placeholder="I worked through..."
+              placeholderTextColor="#9CA3AF"
               value={newEntry.challenges}
               onChangeText={(text) => updateEntryField('challenges', text)}
               multiline
@@ -286,6 +346,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
             <TextInput
               style={styles.textInput}
               placeholder="I'm working towards..."
+              placeholderTextColor="#9CA3AF"
               value={newEntry.goals}
               onChangeText={(text) => updateEntryField('goals', text)}
               multiline
@@ -295,6 +356,8 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ route }) => {
           <TouchableOpacity style={styles.saveButton} onPress={addJournalEntry}>
             <Text style={styles.saveButtonText}>Save Reflection</Text>
           </TouchableOpacity>
+          
+          <View style={{ height: 40 }} />
         </ScrollView>
       </Modal>
     </View>
@@ -324,6 +387,27 @@ const styles = StyleSheet.create({
     color: '#E5E7EB',
     fontSize: 16,
     fontStyle: 'italic',
+    marginBottom: 16,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  statLabel: {
+    color: '#E5E7EB',
+    fontSize: 12,
+    marginTop: 4,
   },
   addButton: {
     backgroundColor: '#6B46C1',
@@ -333,6 +417,11 @@ const styles = StyleSheet.create({
     padding: 16,
     margin: 16,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   addButtonText: {
     color: '#ffffff',
@@ -366,6 +455,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  entryHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   entryDate: {
     fontSize: 14,
@@ -454,11 +547,17 @@ const styles = StyleSheet.create({
     margin: 16,
     padding: 16,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
+    color: '#374151',
   },
   textInput: {
     borderWidth: 1,
@@ -467,6 +566,8 @@ const styles = StyleSheet.create({
     padding: 12,
     minHeight: 80,
     textAlignVertical: 'top',
+    fontSize: 16,
+    backgroundColor: '#F9FAFB',
   },
   saveButton: {
     backgroundColor: '#6B46C1',
@@ -474,6 +575,11 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   saveButtonText: {
     color: '#ffffff',

@@ -10,6 +10,9 @@ Resources:
 Android build:
 - Fix package dependencies (react-native, react-native async, etc.)
 
+Journal:
+- fix delete button or don't display it
+
 TODO:
 Apple build:
 - Create Apple Development account

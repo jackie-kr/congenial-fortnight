@@ -3,8 +3,9 @@ import React, { useState, useEffect, JSX } from 'react';
 import { NavigationContainer, NavigationIndependentTree } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { storage } from '../../components/fallback-storage';
 
 // Import screens
 import CalendarScreen from './screens/CalendarScreen';
@@ -43,6 +44,8 @@ Notifications.setNotificationHandler({
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
+// const storage = new FallbackStorage();
+
 export default function App(): JSX.Element {
   const [userPreferences, setUserPreferences] = useState<UserPreferences>({
     pronouns: '',
@@ -63,7 +66,7 @@ export default function App(): JSX.Element {
 
   const loadUserPreferences = async (): Promise<void> => {
     try {
-      const saved = await AsyncStorage.getItem('userPreferences');
+      const saved = await storage.getItem('userPreferences');
       if (saved) {
         setUserPreferences(JSON.parse(saved));
       }
@@ -74,7 +77,7 @@ export default function App(): JSX.Element {
 
   const saveUserPreferences = async (newPreferences: UserPreferences): Promise<void> => {
     try {
-      await AsyncStorage.setItem('userPreferences', JSON.stringify(newPreferences));
+      await storage.setItem('userPreferences', JSON.stringify(newPreferences));
       setUserPreferences(newPreferences);
     } catch (error) {
       console.log('Error saving preferences:', error);
