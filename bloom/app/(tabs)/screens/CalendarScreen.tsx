@@ -289,6 +289,28 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({ route }) => {
         <Text style={styles.legendNote}>
           Tap on a date to add/view entries
         </Text>
+        <View style={styles.entriesContainer}>
+        <Text style={styles.entriesTitle}>Your Entries</Text>
+        {Object.keys(hrtEntries).length === 0 ? (
+            <Text style={styles.noEntries}>No entries yet. Tap a date to add one!</Text>
+        ) : (
+            Object.entries(hrtEntries)
+            .sort(([a], [b]) => b.localeCompare(a)) // newest first
+            .map(([date, entry]) => (
+                <View key={date} style={styles.entryCard}>
+                <Text style={styles.entryDate}>{date}</Text>
+                <Text style={styles.entryType}>
+                    {entry.type === 'hrt' ? '💊 HRT Taken' : '🎯 Milestone'}
+                </Text>
+                {entry.notes ? (
+                    <Text style={styles.entryNotes}>{entry.notes}</Text>
+                ) : (
+                    <Text style={styles.entryNotesMuted}>No notes</Text>
+                )}
+                </View>
+            ))
+        )}
+      </View>
       </View>
 
       <Modal
@@ -373,6 +395,56 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({ route }) => {
 };
 
 const styles = StyleSheet.create({
+  entriesContainer: {
+  margin: 16,
+  padding: 16,
+  backgroundColor: '#ffffff',
+  borderRadius: 12,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 3,
+  elevation: 2,
+},
+entriesTitle: {
+  fontSize: 16,
+  fontWeight: '600',
+  marginBottom: 8,
+  color: '#374151',
+},
+noEntries: {
+  fontSize: 14,
+  color: '#6B7280',
+  fontStyle: 'italic',
+},
+entryCard: {
+  marginBottom: 12,
+  paddingBottom: 8,
+  borderBottomWidth: 1,
+  borderBottomColor: '#E5E7EB',
+},
+entryDate: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: '#111827',
+},
+entryType: {
+  fontSize: 14,
+  color: '#6B46C1',
+  fontWeight: '500',
+  marginTop: 2,
+},
+entryNotes: {
+  fontSize: 14,
+  color: '#374151',
+  marginTop: 4,
+},
+entryNotesMuted: {
+  fontSize: 14,
+  color: '#9CA3AF',
+  fontStyle: 'italic',
+  marginTop: 4,
+},
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
