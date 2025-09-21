@@ -1,17 +1,21 @@
 Bugs:
 
+App:
+- don't display the tabs on the bottom (FIXED)
+- set overarching font family?
+
 Calendar:
-- Encouraging text changing on every input
+- Encouraging text changing on every input (FIXED)
 
 Resources:
 - Tabs too tall
 - Clinics not specific to location
 
 Android build:
-- Fix package dependencies (react-native, react-native async, etc.)
+- Fix package dependencies (react-native, react-native async, etc.) (FIXED)
 
 Journal:
-- fix delete button or don't display it
+- fix delete button or don't display it (FIXED)
 
 TODO:
 Apple build:
