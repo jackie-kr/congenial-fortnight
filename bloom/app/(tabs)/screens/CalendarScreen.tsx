@@ -223,12 +223,10 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({ route }) => {
     return messages[Math.floor(Math.random() * messages.length)];
   };
 
-<<<<<<< Updated upstream
   // Set motivational message once when component mounts
   useEffect(() => {
     setMotivationalMessage(getRandomMotivationalMessage());
   }, []);
-=======
   const getStreakCount = (): number => {
     const sortedDates = Object.keys(hrtEntries)
       .filter(date => hrtEntries[date].type === 'hrt')
@@ -255,21 +253,16 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({ route }) => {
     
     return streak;
   };
->>>>>>> Stashed changes
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.motivationBox}>
-<<<<<<< Updated upstream
         <Text style={styles.motivationText}>{motivationalMessage}</Text>
-=======
-        <Text style={styles.motivationText}>{getMotivationalMessage()}</Text>
         {getStreakCount() > 0 && (
           <Text style={styles.streakText}>
             🔥 {getStreakCount()} day streak!
           </Text>
         )}
->>>>>>> Stashed changes
       </View>
 
       <Calendar
