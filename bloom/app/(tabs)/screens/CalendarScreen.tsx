@@ -142,7 +142,9 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({ route }) => {
     setModalVisible(true);
   };
 
-  const getMotivationalMessage = (): string => {
+  const [motivationalMessage, setMotivationalMessage] = useState<string>('');
+
+  const getRandomMotivationalMessage = (): string => {
     const messages = [
       "Every step forward is progress! 🌟",
       "You're becoming more yourself every day! 💖",
@@ -153,10 +155,15 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({ route }) => {
     return messages[Math.floor(Math.random() * messages.length)];
   };
 
+  // Set motivational message once when component mounts
+  useEffect(() => {
+    setMotivationalMessage(getRandomMotivationalMessage());
+  }, []);
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.motivationBox}>
-        <Text style={styles.motivationText}>{getMotivationalMessage()}</Text>
+        <Text style={styles.motivationText}>{motivationalMessage}</Text>
       </View>
 
       <Calendar
