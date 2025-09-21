@@ -1,0 +1,26 @@
+Bugs:
+
+Calendar:
+- Encouraging text changing on every input
+
+Resources:
+- Tabs too tall
+- Clinics not specific to location
+
+Android build:
+- Fix package dependencies (react-native, react-native async, etc.)
+
+TODO:
+Apple build:
+- Create Apple Development account
+
+Goals section??
+- Move goals out of settings section
+
+settings
+- Gender identity
+
+
+
+After builds work: 
+- Stealth mode
