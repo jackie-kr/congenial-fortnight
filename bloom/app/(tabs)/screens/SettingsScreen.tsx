@@ -1,5 +1,5 @@
 // screens/SettingsScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,11 @@ import {
   TouchableOpacity,
   TextInput,
   Switch,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp } from '@react-navigation/native';
 import { UserPreferences } from '../types';
+import { storage } from '../../../components/fallback-storage';
 
 interface SettingsScreenProps {
   route: RouteProp<{
@@ -33,7 +33,7 @@ type PronounOption = 'she/her' | 'he/him' | 'they/them' | 'xe/xir' | 'ze/zir' | 
 
 const SettingsScreen: React.FC<SettingsScreenProps> = ({ route }) => {
   const { userPreferences, saveUserPreferences } = route.params || {};
-  const [localPreferences, setLocalPreferences] = useState<UserPreferences>(userPreferences || {
+  const [localPreferences, setLocalPreferences] = useState<UserPreferences>({
     pronouns: '',
     goals: [],
     reminderTime: '09:00',
@@ -48,11 +48,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ route }) => {
     reminderTime: false,
   });
 
+  const [customPronoun, setCustomPronoun] = useState<string>('');
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'idle'>('idle');
+
   const pronounOptions: PronounOption[] = [
     'she/her', 'he/him', 'they/them', 'xe/xir', 'ze/zir', 'custom'
   ];
-
-  const [customPronoun, setCustomPronoun] = useState<string>('');
 
   const goalOptions: string[] = [
     'Start HRT',
@@ -65,10 +66,48 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ route }) => {
     'Self-acceptance',
   ];
 
-  const handleSave = (): void => {
-    if (saveUserPreferences) {
-      saveUserPreferences(localPreferences);
-      Alert.alert('Settings Saved! ✨', 'Your preferences have been updated');
+  // Load preferences from storage on component mount
+  useEffect(() => {
+    loadPreferences();
+  }, []);
+
+  // Auto-save whenever preferences change
+  useEffect(() => {
+    if (localPreferences.pronouns || localPreferences.goals.length > 0) {
+      autoSave();
+    }
+  }, [localPreferences]);
+
+  const loadPreferences = async (): Promise<void> => {
+    try {
+      const saved = await storage.getItem('userPreferences');
+      if (saved) {
+        const parsedPrefs = JSON.parse(saved);
+        setLocalPreferences(parsedPrefs);
+      } else if (userPreferences) {
+        // Fallback to route params if no saved preferences
+        setLocalPreferences(userPreferences);
+      }
+    } catch (error) {
+      console.log('Error loading preferences:', error);
+      if (userPreferences) {
+        setLocalPreferences(userPreferences);
+      }
+    }
+  };
+
+  const autoSave = async (): Promise<void> => {
+    setSaveStatus('saving');
+    try {
+      await storage.setItem('userPreferences', JSON.stringify(localPreferences));
+      if (saveUserPreferences) {
+        saveUserPreferences(localPreferences);
+      }
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (error) {
+      console.log('Error auto-saving preferences:', error);
+      setSaveStatus('idle');
     }
   };
 
@@ -113,6 +152,13 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ route }) => {
       setCustomPronoun('');
     }
   };
+
+  const handleTimeChange = (hours: number, minutes: number): void => {
+    const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    updatePreference('reminderTime', timeString);
+    updateEditingState('reminderTime', false);
+  };
+
   interface SettingSectionProps {
     title: string;
     children: React.ReactNode;
@@ -205,11 +251,79 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ route }) => {
     </TouchableOpacity>
   );
 
+  const TimePickerModal: React.FC = () => {
+    const [hours, minutes] = localPreferences.reminderTime.split(':').map(Number);
+    
+    return (
+      <View style={styles.timePickerContainer}>
+        <Text style={styles.timePickerTitle}>Select Reminder Time</Text>
+        <View style={styles.timePickerRow}>
+          <View style={styles.timePickerColumn}>
+            <Text style={styles.timePickerLabel}>Hours</Text>
+            {[...Array(24)].map((_, i) => (
+              <TouchableOpacity
+                key={i}
+                style={[
+                  styles.timeOption,
+                  hours === i && styles.selectedTimeOption
+                ]}
+                onPress={() => handleTimeChange(i, minutes)}
+              >
+                <Text style={[
+                  styles.timeOptionText,
+                  hours === i && styles.selectedTimeOptionText
+                ]}>
+                  {i.toString().padStart(2, '0')}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.timePickerColumn}>
+            <Text style={styles.timePickerLabel}>Minutes</Text>
+            {[0, 15, 30, 45].map((minute) => (
+              <TouchableOpacity
+                key={minute}
+                style={[
+                  styles.timeOption,
+                  minutes === minute && styles.selectedTimeOption
+                ]}
+                onPress={() => handleTimeChange(hours, minute)}
+              >
+                <Text style={[
+                  styles.timeOptionText,
+                  minutes === minute && styles.selectedTimeOptionText
+                ]}>
+                  {minute.toString().padStart(2, '0')}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const getSaveStatusText = (): string => {
+    switch (saveStatus) {
+      case 'saving': return 'Saving...';
+      case 'saved': return 'Saved!';
+      default: return '';
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Settings</Text>
         <Text style={styles.headerSubtitle}>Customize your Bloom experience</Text>
+        {saveStatus !== 'idle' && (
+          <Text style={[
+            styles.saveStatus,
+            saveStatus === 'saved' && styles.saveStatusSuccess
+          ]}>
+            {getSaveStatusText()}
+          </Text>
+        )}
       </View>
 
       <SettingSection title="🏳️‍⚧️ Identity">
@@ -239,9 +353,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ route }) => {
               ))}
             </View>
             
-            {localPreferences.pronouns === 'custom' || 
-             (pronounOptions.find(p => p === localPreferences.pronouns) === undefined && 
-              localPreferences.pronouns !== '') ? (
+            {(localPreferences.pronouns === 'custom' || 
+             (!pronounOptions.includes(localPreferences.pronouns as PronounOption) && 
+              localPreferences.pronouns !== '')) && (
               <View style={styles.customPronounInput}>
                 <TextInput
                   style={styles.textInput}
@@ -251,7 +365,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ route }) => {
                   onSubmitEditing={handleCustomPronounSave}
                 />
               </View>
-            ) : null}
+            )}
           </View>
         )}
 
@@ -313,6 +427,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ route }) => {
           }
         />
 
+        {isEditing.reminderTime && <TimePickerModal />}
+
         <SettingRow
           icon="chatbubble-ellipses"
           title="Motivational Messages"
@@ -348,12 +464,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ route }) => {
         />
       </SettingSection>
 
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>Save Changes</Text>
-      </TouchableOpacity>
+      <View style={{ height: 40 }} />
     </ScrollView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -376,6 +490,15 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 16,
     color: '#6B7280',
+  },
+  saveStatus: {
+    fontSize: 14,
+    color: '#F59E0B',
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  saveStatusSuccess: {
+    color: '#10B981',
   },
   section: {
     backgroundColor: '#ffffff',
@@ -488,19 +611,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     marginTop: 8,
   },
-  saveButton: {
-    backgroundColor: '#6B46C1',
-    marginHorizontal: 20,
-    marginVertical: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
   switchContainer: {
     marginLeft: 8,
   },
@@ -519,24 +629,56 @@ const styles = StyleSheet.create({
   customPronounInput: {
     marginHorizontal: 20,
     marginVertical: 8,
-  }
+  },
+  timePickerContainer: {
+    backgroundColor: '#F9FAFB',
+    padding: 20,
+    marginHorizontal: 20,
+    borderRadius: 12,
+    marginVertical: 8,
+  },
+  timePickerTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  timePickerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  timePickerColumn: {
+    flex: 1,
+    marginHorizontal: 8,
+  },
+  timePickerLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  timeOption: {
+    padding: 8,
+    borderRadius: 6,
+    marginVertical: 2,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  selectedTimeOption: {
+    backgroundColor: '#6B46C1',
+    borderColor: '#6B46C1',
+  },
+  timeOptionText: {
+    textAlign: 'center',
+    fontSize: 14,
+    color: '#374151',
+  },
+  selectedTimeOptionText: {
+    color: '#ffffff',
+  },
 });
 
 export default SettingsScreen;
-
-    // <ScrollView style={styles.container}>
-    //   <View style={styles.header}>
-    //     <Text style={styles.headerTitle}>Settings</Text>
-    //     <Text style={styles.headerSubtitle}>Customize your Bloom experience</Text>
-    //   </View>
-
-    //   <SettingSection title="🏳️‍⚧️ Identity">
-    //     <SettingRow
-    //       icon="person"
-    //       title="Pronouns"
-    //       subtitle={localPreferences.pronouns || "Not set"}
-    //       rightComponent={
-    //         <TouchableOpacity
-    //           onPress={() => updateEditingState('pronouns', !isEditing.pronouns)}
-    //         >
-    //           <Ionicons name="create-outline" size={20} color="#6B7280" />
